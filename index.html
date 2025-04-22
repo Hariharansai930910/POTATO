@@ -97,7 +97,55 @@
           alert("Error signing out: " + error.message);
         }
       });
+       
+      const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+const nodemailer = require('nodemailer');
+
+admin.initializeApp();
+
+exports.sendMatchNotifications = functions.firestore
+  .document('match_requests/{requestId}')
+  .onCreate(async (snap, context) => {
+    const matchData = snap.data();
+    
+    // Get all users from Authentication
+    const userListResult = await admin.auth().listUsers();
+    const users = userListResult.users;
+    
+    // Filter out the requesting user
+    const otherUsers = users.filter(user => user.email !== matchData.user_email);
+    
+    // Set up email transporter (replace with your email service details)
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'your-actual-email@gmail.com',  // Replace with your email
+        pass: 'your-app-password'             // Replace with app password
+      }
+    });
+    
+    // Send emails to all other users
+    const emailPromises = otherUsers.map(user => {
+      const mailOptions = {
+        from: 'SliceMate <your-actual-email@gmail.com>',  // Replace with your email
+        to: user.email,
+        subject: 'New SliceMate Match Available!',
+        html: `
+          <h1>New Match Request!</h1>
+          <p>Someone wants to share ${matchData.food_name} and needs a partner!</p>
+          <p>They want ${matchData.slices_wanted} slices out of 8.</p>
+          <p><a href="https://your-app-url.com/respond.html?requestId=${context.params.requestId}">Click here to respond</a></p>
+        `
+      };
       
+      return transporter.sendMail(mailOptions);
+    });
+    
+    return Promise.all(emailPromises);
+  });
+
+
       // Continue waiting button
       document.getElementById("continue-waiting").addEventListener("click", () => {
         window.location.href = 'waiting.html';
@@ -269,6 +317,63 @@
       addressContainer.classList.remove("hidden");
     } else {
       addressContainer.classList.add("hidden");
+    }
+  });
+
+  // Prevent form submission and handle match creation
+  document.getElementById("match-form").addEventListener("submit", async function(e) {
+    e.preventDefault(); // Prevent the default form submission
+    console.log("Form submission intercepted");
+    
+    try {
+      // Get the current user - using the modular API since that's what you import
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Please log in first");
+        window.location.href = 'login-extended.html';
+        return;
+      }
+      
+      // Get form values
+      const foodName = document.getElementById('food-name').value;
+      const slicesWanted = parseInt(document.getElementById('slice-count').value);
+      const deliveryPreference = document.getElementById('match-pref').value;
+      const deliveryAddress = document.getElementById('delivery-address')?.value || '';
+      
+      if (!foodName || !slicesWanted) {
+        alert("Please fill in all required fields");
+        return;
+      }
+      
+      console.log("Creating match request...");
+      
+      // Create match request in Firestore (using the modular API)
+      import { collection, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+      
+      const matchRequestRef = doc(collection(db, "match_requests"));
+      const requestId = matchRequestRef.id;
+      
+      await setDoc(matchRequestRef, {
+        request_id: requestId,
+        user_id: user.uid,
+        user_email: user.email,
+        food_name: foodName,
+        slices_wanted: slicesWanted,
+        delivery_preference: deliveryPreference,
+        delivery_address: deliveryAddress,
+        status: "waiting",
+        created_at: new Date().toISOString(),
+        payment_status: "pending"
+      });
+      
+      // Store request ID in localStorage for reference
+      localStorage.setItem("matchRequestId", requestId);
+      
+      console.log("✅ Match request created, redirecting to waiting page");
+      window.location.href = 'waiting.html';
+    } catch (err) {
+      console.error("Error creating match request:", err);
+      alert("Failed to create match request: " + err.message);
     }
   });
 </script>
