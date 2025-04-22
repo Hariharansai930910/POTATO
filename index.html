@@ -261,18 +261,6 @@
     </div>
   </main>
   
-  <script>
-    // Show/hide address field based on delivery preference
-    document.getElementById("match-pref").addEventListener("change", function() {
-      const addressContainer = document.getElementById("address-container");
-      if (this.value === "deliver") {
-        addressContainer.classList.remove("hidden");
-      } else {
-        addressContainer.classList.add("hidden");
-      }
-    });
-  </script>
-// Add this script at the bottom of your HTML file, just before the closing </body> tag
 <script>
   // Show/hide address field based on delivery preference
   document.getElementById("match-pref").addEventListener("change", function() {
@@ -287,33 +275,37 @@
   // Prevent form submission and handle match creation
   document.getElementById("match-form").addEventListener("submit", async function(e) {
     e.preventDefault(); // Prevent the default form submission
-    
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Please log in first");
-      window.location.href = 'login-extended.html';
-      return;
-    }
-    
-    // Get form values
-    const foodName = document.getElementById('food-name').value;
-    const slicesWanted = parseInt(document.getElementById('slice-count').value);
-    const deliveryPreference = document.getElementById('match-pref').value;
-    const deliveryAddress = document.getElementById('delivery-address')?.value || '';
-    
-    if (!foodName || !slicesWanted) {
-      alert("Please fill in all required fields");
-      return;
-    }
+    console.log("Form submission intercepted");
     
     try {
+      // Get the current user - using the modular API since that's what you import
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Please log in first");
+        window.location.href = 'login-extended.html';
+        return;
+      }
+      
+      // Get form values
+      const foodName = document.getElementById('food-name').value;
+      const slicesWanted = parseInt(document.getElementById('slice-count').value);
+      const deliveryPreference = document.getElementById('match-pref').value;
+      const deliveryAddress = document.getElementById('delivery-address')?.value || '';
+      
+      if (!foodName || !slicesWanted) {
+        alert("Please fill in all required fields");
+        return;
+      }
+      
       console.log("Creating match request...");
       
-      // Create match request in Firestore (using the compat API)
-      const matchRequestRef = firebase.firestore().collection("match_requests").doc();
+      // Create match request in Firestore (using the modular API)
+      import { collection, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+      
+      const matchRequestRef = doc(collection(db, "match_requests"));
       const requestId = matchRequestRef.id;
       
-      await matchRequestRef.set({
+      await setDoc(matchRequestRef, {
         request_id: requestId,
         user_id: user.uid,
         user_email: user.email,
