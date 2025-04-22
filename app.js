@@ -179,34 +179,50 @@ document.addEventListener('DOMContentLoaded', () => {
 // Find Match Button Logic
 const findMatchBtn = document.getElementById('find-match-btn');
 if (findMatchBtn) {
-  findMatchBtn.addEventListener('click', async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Please log in first");
-      window.location.href = 'login-extended.html';
-      return;
-    }
-    
-    // Get form values
-    const foodName = document.getElementById('food-name')?.value || 
-                     document.getElementById('foodInput')?.value;
-    const slicesWanted = parseInt(document.getElementById('slice-count')?.value || 
-                                  document.getElementById('sliceInput')?.value);
-    const deliveryPreference = document.getElementById('match-pref')?.value || 
-                               document.getElementById('matchPref')?.value;
-    const deliveryAddress = document.getElementById('delivery-address')?.value || '';
-    
-    if (!foodName || !slicesWanted) {
-      alert("Please fill in all required fields");
-      return;
-    }
+  findMatchBtn.addEventListener('click', async (e) => {
+    e.preventDefault(); // Prevent default form submission
     
     try {
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Please log in first");
+        window.location.href = 'login-extended.html';
+        return;
+      }
+      
+      // Get form values - try multiple possible ID formats
+      const foodName = document.querySelector('input[placeholder*="Pizza"]').value || 
+                       document.getElementById('food-name')?.value || 
+                       document.getElementById('foodInput')?.value;
+                       
+      const slicesWantedElement = document.querySelector('select[id*="slice"]') || 
+                                 document.getElementById('slice-count') || 
+                                 document.getElementById('sliceInput');
+      const slicesWanted = parseInt(slicesWantedElement?.value || "4");
+      
+      const preferenceElement = document.querySelector('select[id*="meet"]') || 
+                              document.getElementById('match-pref') || 
+                              document.getElementById('matchPref');
+      const deliveryPreference = preferenceElement?.value || "restaurant";
+      
+      const deliveryAddress = document.getElementById('delivery-address')?.value || '';
+      
+      if (!foodName) {
+        alert("Please enter what food you're sharing");
+        return;
+      }
+      
+      console.log("Creating match with:", {
+        food: foodName,
+        slices: slicesWanted,
+        preference: deliveryPreference
+      });
+      
       // Create match request in Firestore
-      const matchRequestRef = doc(collection(db, "match_requests"));
+      const matchRequestRef = db.collection("match_requests").doc();
       const requestId = matchRequestRef.id;
       
-      await setDoc(matchRequestRef, {
+      await matchRequestRef.set({
         request_id: requestId,
         user_id: user.uid,
         user_email: user.email,
@@ -226,7 +242,7 @@ if (findMatchBtn) {
       window.location.href = 'waiting.html';
     } catch (err) {
       console.error("Error creating match request:", err);
-      alert("Failed to create match request. Please try again.");
+      alert("Failed to create match request: " + err.message);
     }
   });
 }
