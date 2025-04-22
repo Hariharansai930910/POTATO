@@ -176,13 +176,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // *** INDEX PAGE ***
-// Find Match Button Logic
-const findMatchBtn = document.getElementById('find-match-btn');
-if (findMatchBtn) {
-  findMatchBtn.addEventListener('click', async (e) => {
-    e.preventDefault(); // Prevent default form submission
+// Find Match Button Logic for the form
+document.addEventListener('DOMContentLoaded', () => {
+  const matchForm = document.getElementById('match-form');
+  if (matchForm) {
+    console.log("Match form found, adding submit handler");
     
-    try {
+    matchForm.addEventListener('submit', async (e) => {
+      e.preventDefault(); // Prevent the default form submission
+      console.log("Form submission intercepted");
+      
       const user = auth.currentUser;
       if (!user) {
         alert("Please log in first");
@@ -190,62 +193,49 @@ if (findMatchBtn) {
         return;
       }
       
-      // Get form values - try multiple possible ID formats
-      const foodName = document.querySelector('input[placeholder*="Pizza"]').value || 
-                       document.getElementById('food-name')?.value || 
-                       document.getElementById('foodInput')?.value;
-                       
-      const slicesWantedElement = document.querySelector('select[id*="slice"]') || 
-                                 document.getElementById('slice-count') || 
-                                 document.getElementById('sliceInput');
-      const slicesWanted = parseInt(slicesWantedElement?.value || "4");
-      
-      const preferenceElement = document.querySelector('select[id*="meet"]') || 
-                              document.getElementById('match-pref') || 
-                              document.getElementById('matchPref');
-      const deliveryPreference = preferenceElement?.value || "restaurant";
-      
+      // Get form values
+      const foodName = document.getElementById('food-name').value;
+      const slicesWanted = parseInt(document.getElementById('slice-count').value);
+      const deliveryPreference = document.getElementById('match-pref').value;
       const deliveryAddress = document.getElementById('delivery-address')?.value || '';
       
-      if (!foodName) {
-        alert("Please enter what food you're sharing");
+      if (!foodName || !slicesWanted) {
+        alert("Please fill in all required fields");
         return;
       }
       
-      console.log("Creating match with:", {
-        food: foodName,
-        slices: slicesWanted,
-        preference: deliveryPreference
-      });
-      
-      // Create match request in Firestore
-      const matchRequestRef = db.collection("match_requests").doc();
-      const requestId = matchRequestRef.id;
-      
-      await matchRequestRef.set({
-        request_id: requestId,
-        user_id: user.uid,
-        user_email: user.email,
-        food_name: foodName,
-        slices_wanted: slicesWanted,
-        delivery_preference: deliveryPreference,
-        delivery_address: deliveryAddress,
-        status: "waiting",
-        created_at: new Date().toISOString(),
-        payment_status: "pending"
-      });
-      
-      // Store request ID in localStorage for reference
-      localStorage.setItem("matchRequestId", requestId);
-      
-      console.log("✅ Match request created, redirecting to waiting page");
-      window.location.href = 'waiting.html';
-    } catch (err) {
-      console.error("Error creating match request:", err);
-      alert("Failed to create match request: " + err.message);
-    }
-  });
-}
+      try {
+        console.log("Creating match request...");
+        
+        // Create match request in Firestore
+        const matchRequestRef = doc(collection(db, "match_requests"));
+        const requestId = matchRequestRef.id;
+        
+        await setDoc(matchRequestRef, {
+          request_id: requestId,
+          user_id: user.uid,
+          user_email: user.email,
+          food_name: foodName,
+          slices_wanted: slicesWanted,
+          delivery_preference: deliveryPreference,
+          delivery_address: deliveryAddress,
+          status: "waiting",
+          created_at: new Date().toISOString(),
+          payment_status: "pending"
+        });
+        
+        // Store request ID in localStorage for reference
+        localStorage.setItem("matchRequestId", requestId);
+        
+        console.log("✅ Match request created, redirecting to waiting page");
+        window.location.href = 'waiting.html';
+      } catch (err) {
+        console.error("Error creating match request:", err);
+        alert("Failed to create match request: " + err.message);
+      }
+    });
+  }
+});
 
 // *** WAITING PAGE ***
 const cancelMatchBtn = document.getElementById('cancel-match');
