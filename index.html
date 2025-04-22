@@ -120,15 +120,15 @@ exports.sendMatchNotifications = functions.firestore
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'your-actual-email@gmail.com',  // Replace with your email
-        pass: 'your-app-password'             // Replace with app password
+        user: 'sharemaate@gmail.com',  // Replace with your email
+        pass: 'Uniqueideathatgotmerich@04172025'             // Replace with app password
       }
     });
     
     // Send emails to all other users
     const emailPromises = otherUsers.map(user => {
       const mailOptions = {
-        from: 'SliceMate <your-actual-email@gmail.com>',  // Replace with your email
+        from: 'sharemaate@gmail.com',  // Replace with your email
         to: user.email,
         subject: 'New SliceMate Match Available!',
         html: `
